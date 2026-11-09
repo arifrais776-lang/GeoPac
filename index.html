@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GeoPac: Misi Pembangunan Nusantara</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script>
+  if (window.tailwind) tailwind.config = { theme: { extend: { fontFamily: {
+    display: ['Fredoka', 'sans-serif'],
+    sans: ['"Plus Jakarta Sans"', 'sans-serif']
+  } } } };
+</script>
+<style>
+  html, body { height: 100%; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+  .font-display { font-family: 'Fredoka', sans-serif; }
+
+  /* Latar bergerak cerah */
+  .bg-anim { background: linear-gradient(135deg, #fef3c7, #fce7f3, #dbeafe, #dcfce7, #fef9c3); background-size: 400% 400%; animation: bgmove 16s ease infinite; }
+  @keyframes bgmove { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+  /* Animasi umum */
+  .pop-in { animation: popIn .38s cubic-bezier(.2,1.5,.4,1); }
+  @keyframes popIn { from{transform:scale(.7);opacity:0} to{transform:scale(1);opacity:1} }
+  .shake { animation: shake .45s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+  .bob { animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 50%{transform:translateY(-10px)} }
+  .bump { animation: bump .35s; }
+  @keyframes bump { 50%{transform:scale(1.35)} }
+  .pulse-red { animation: pulseRed .8s infinite; }
+  @keyframes pulseRed { 50%{ color:#e11d48; transform:scale(1.12);} }
+
+  /* Tombol 3D ramah sentuh */
+  .btn-3d { box-shadow: 0 6px 0 rgba(0,0,0,.2); transition: transform .08s, box-shadow .08s, filter .15s; }
+  .btn-3d:hover { filter: brightness(1.07); }
+  .btn-3d:active, .btn-3d.pressed { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.2); }
+
+  /* Kilatan layar */
+  #flash { opacity: 0; }
+  .flash-go { animation: flash .55s ease-out; }
+  @keyframes flash { 0%{opacity:.55} 100%{opacity:0} }
+
+  /* Logo Pac-Man CSS */
+  .pac { width:78px; height:78px; border-radius:50%; background:#facc15; animation: chomp .3s linear infinite alternate; filter: drop-shadow(0 4px 0 #ca8a04); }
+  @keyframes chomp {
+    0%  { clip-path: polygon(100% 78%, 48% 50%, 100% 22%, 100% 0, 0 0, 0 100%, 100% 100%); }
+    100%{ clip-path: polygon(100% 52%, 48% 50%, 100% 48%, 100% 0, 0 0, 0 100%, 100% 100%); }
+  }
+  .dot-run { width:14px; height:14px; border-radius:50%; background:#fb923c; animation: dotRun 1.2s linear infinite; }
+  @keyframes dotRun { 0%{transform:translateX(0);opacity:1} 80%{opacity:1} 100%{transform:translateX(-40px);opacity:0} }
+  .ghost { width:58px; height:62px; border-radius:29px 29px 6px 6px; position:relative; animation: bob 1.6s ease-in-out infinite; }
+  .ghost::before, .ghost::after { content:''; position:absolute; top:18px; width:15px; height:17px; border-radius:50%; background: radial-gradient(circle at 35% 55%, #1e293b 0 4px, #fff 4.5px); }
+  .ghost::before { left:11px; } .ghost::after { right:11px; }
+
+  /* Konfeti */
+  .confetti { position:fixed; top:-20px; width:10px; height:16px; z-index:60; pointer-events:none; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+  canvas#cv { touch-action: none; display:block; border-radius: 14px; }
+  .dpad { touch-action: none; user-select:none; -webkit-user-select:none; }
+  ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background:#c7d2fe; border-radius:8px; }
+</style>
+</head>
+<body class="bg-anim text-slate-800">
+
+<div id="flash" class="fixed inset-0 pointer-events-none z-40"></div>
+
+<!-- ======================= LAYAR MENU ======================= -->
+<section id="scrMenu" class="min-h-full flex items-center justify-center p-4">
+  <div class="w-full max-w-xl bg-white/90 backdrop-blur rounded-[2rem] shadow-2xl p-6 sm:p-8 pop-in">
+    <div class="flex items-center justify-center gap-4 mb-3">
+      <div class="pac"></div>
+      <div class="flex gap-3"><div class="dot-run"></div><div class="dot-run" style="animation-delay:.4s"></div><div class="dot-run" style="animation-delay:.8s"></div></div>
+      <div class="ghost" style="background:#f472b6"></div>
+      <div class="ghost hidden sm:block" style="background:#22d3ee;animation-delay:.3s"></div>
+    </div>
+    <h1 class="font-display text-5xl sm:text-6xl text-center font-bold bg-gradient-to-r from-amber-500 via-pink-500 to-indigo-600 bg-clip-text text-transparent">GeoPac</h1>
+    <p class="text-center font-extrabold text-indigo-600 text-lg">Misi Pembangunan Nusantara 🛵</p>
+    <p class="text-center text-sm text-slate-500 mt-1">Geografi SMA · Fase F · Pembangunan Wilayah &amp; Revolusi Industri</p>
+
+    <div class="mt-6 grid gap-3">
+      <label class="block">
+        <span class="text-sm font-bold text-slate-600">Nama Pemain</span>
+        <input id="inNama" maxlength="20" placeholder="Contoh: Andi" class="mt-1 w-full rounded-2xl border-2 border-indigo-200 focus:border-indigo-500 outline-none px-4 py-3 text-lg font-semibold">
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-sm font-bold text-slate-600">Kelas</span>
+          <input id="inKelas" maxlength="10" placeholder="XI-2" class="mt-1 w-full rounded-2xl border-2 border-indigo-200 focus:border-indigo-500 outline-none px-4 py-3 text-lg font-semibold">
+        </label>
+        <label class="block">
+          <span class="text-sm font-bold text-slate-600">Mulai dari</span>
+          <select id="inLevel" class="mt-1 w-full rounded-2xl border-2 border-indigo-200 focus:border-indigo-500 outline-none px-3 py-3 text-lg font-semibold bg-white"></select>
+        </label>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-3">
+      <button onclick="mulaiGame()" class="btn-3d w-full rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-display text-2xl py-4">▶ Mulai Main</button>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="tampilPapanSkor()" class="btn-3d rounded-2xl bg-indigo-500 text-white font-bold text-lg py-3">🏆 Papan Skor</button>
+        <button onclick="tampilCaraMain()" class="btn-3d rounded-2xl bg-emerald-500 text-white font-bold text-lg py-3">❓ Cara Main</button>
+      </div>
+    </div>
+    <p class="text-center text-xs text-slate-400 mt-5">Durasi ±10–20 menit · Cocok untuk HP, laptop &amp; layar interaktif (PID)</p>
+  </div>
+</section>
+
+<!-- ======================= LAYAR GAME ======================= -->
+<section id="scrGame" class="hidden min-h-full p-2 sm:p-4">
+  <div class="max-w-7xl mx-auto">
+    <!-- HUD -->
+    <header class="bg-white/90 backdrop-blur rounded-2xl shadow-lg px-3 py-2 sm:py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div class="flex items-center gap-2">
+        <span id="hudLevel" class="px-3 py-1 rounded-full bg-indigo-600 text-white font-display text-sm sm:text-base">Level 1/5</span>
+        <span id="hudLevelName" class="hidden md:inline font-bold text-slate-600 text-sm"></span>
+      </div>
+      <div class="flex items-center gap-1 font-display text-lg sm:text-xl">⭐ <span id="hudScore">0</span></div>
+      <div id="hudCombo" class="font-display text-orange-500 text-base sm:text-lg"></div>
+      <div id="hudLives" class="text-lg sm:text-xl tracking-tight"></div>
+      <div class="flex-1 min-w-[140px] flex items-center gap-2">
+        <span>⏱️</span>
+        <div class="flex-1 h-3 sm:h-4 bg-slate-200 rounded-full overflow-hidden">
+          <div id="hudTimerBar" class="h-full rounded-full bg-emerald-500 transition-[width] duration-200" style="width:100%"></div>
+        </div>
+        <span id="hudTimerText" class="font-display text-lg w-9 text-right">45</span>
+      </div>
+      <div class="flex gap-2">
+        <button id="btnSound" onclick="toggleSound()" class="btn-3d w-11 h-11 rounded-xl bg-sky-100 text-xl" title="Suara">🔊</button>
+        <button onclick="togglePause()" class="btn-3d w-11 h-11 rounded-xl bg-amber-100 text-xl" title="Jeda">⏸️</button>
+      </div>
+    </header>
+
+    <main class="mt-2 sm:mt-3 grid gap-2 sm:gap-3 lg:grid-cols-[minmax(320px,430px)_1fr]">
+      <!-- Panel soal -->
+      <div id="qPanel" class="lg:col-start-1 lg:row-start-1 bg-white/95 rounded-2xl shadow-lg p-3 sm:p-4"></div>
+
+      <!-- Arena -->
+      <div id="arenaWrap" class="lg:col-start-2 lg:row-start-1 lg:row-span-2 bg-[#0b1026] rounded-2xl shadow-xl p-2 flex items-center justify-center">
+        <canvas id="cv"></canvas>
+      </div>
+
+      <!-- D-Pad -->
+      <div id="dpadWrap" class="lg:col-start-1 lg:row-start-2 bg-white/80 rounded-2xl shadow p-3">
+        <div class="grid grid-cols-3 gap-2 w-[200px] sm:w-[228px] mx-auto">
+          <div></div>
+          <button data-dir="up" class="dpad btn-3d h-14 sm:h-[70px] rounded-2xl bg-indigo-500 text-white text-3xl">▲</button>
+          <div></div>
+          <button data-dir="left" class="dpad btn-3d h-14 sm:h-[70px] rounded-2xl bg-indigo-500 text-white text-3xl">◀</button>
+          <button onclick="togglePause()" class="btn-3d h-14 sm:h-[70px] rounded-2xl bg-amber-400 text-white text-2xl">⏸</button>
+          <button data-dir="right" class="dpad btn-3d h-14 sm:h-[70px] rounded-2xl bg-indigo-500 text-white text-3xl">▶</button>
+          <div></div>
+          <button data-dir="down" class="dpad btn-3d h-14 sm:h-[70px] rounded-2xl bg-indigo-500 text-white text-3xl">▼</button>
+          <div></div>
+        </div>
+        <p class="hidden sm:block text-center text-xs text-slate-500 mt-2">Keyboard: ← ↑ → ↓ / W A S D · Geser (swipe) di arena · P = jeda</p>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ======================= MODAL ======================= -->
+<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+  <div id="modalBox" class="bg-white rounded-3xl w-full max-w-lg max-h-[92vh] overflow-y-auto p-5 sm:p-7 shadow-2xl"></div>
+</div>
+
+<script>
+/* ==========================================================================
+   GeoPac: Misi Pembangunan Nusantara
+   --------------------------------------------------------------------------
+   📝 PANDUAN UNTUK GURU
+   - Semua soal ada di array LEVEL_GAME di bawah. Cukup edit teksnya.
+   - Setiap level punya: nama, cerita, pengaturan hantu, waktu, dan daftar soal.
+   - Format satu soal:
+       {
+         pertanyaan: "Teks pertanyaan ...",
+         pilihan: ["Pilihan 1", "Pilihan 2", "Pilihan 3", "Pilihan 4"], // 2–4 pilihan
+         jawabanBenar: 0,   // indeks pilihan yang benar: 0 = pertama, 1 = kedua, dst.
+         pembahasan: "Penjelasan singkat yang muncul setelah siswa menjawab."
+       }
+   - Urutan pilihan diacak otomatis saat main (atur di PENGATURAN.acakPilihan),
+     jadi jawabanBenar boleh selalu 0 tanpa masalah.
+   - Mau menambah level? Salin satu blok { ... } level, tempel di akhir array.
+   ========================================================================== */
+
+// ======================= 1. PENGATURAN UMUM =======================
+const PENGATURAN = {
+  nyawaAwal: 3,            // jumlah nyawa di awal permainan
+  nyawaMaksimal: 5,        // batas nyawa (bonus nyawa tiap selesai level)
+  poinBenar: 100,          // poin dasar untuk jawaban benar
+  bonusWaktuMaks: 50,      // bonus tambahan jika menjawab cepat
+  poinPelet: 1,            // poin tiap memakan "koin pembangunan"
+  poinHantu: 50,           // poin menangkap hantu saat power-up aktif
+  durasiPowerUp: 6,        // detik efek ⚡ Energi Terbarukan
+  kecepatanPemain: 5.2,    // petak per detik
+  waktuPerSoalDefault: 45, // dipakai jika level tidak menentukan waktu
+  acakUrutanSoal: false,   // true = urutan soal dalam level diacak
+  acakPilihan: true,       // true = urutan pilihan A–D diacak
+  jumlahPapanSkor: 10      // jumlah peringkat yang ditampilkan
+};
+
+// ======================= 2. BANK SOAL / LEVEL =======================
+const LEVEL_GAME = [
+  // ---------------------------------------------------------- LEVEL 1
+  {
+    nama: "Lorong Waktu Revolusi Industri",
+    ikon: "🏭",
+    lokasi: "Museum Sains, Makassar",
+    cerita: "Kelasmu study tour ke museum sains. Raka si kurir GeoPac menemukan lorong waktu yang membawanya dari pabrik tenun bertenaga uap di Inggris sampai ke zaman aplikasi ojol di HP-mu. Antarkan paket jawaban ke pos yang tepat untuk membuka setiap pintu zaman!",
+    warnaDinding: "#38bdf8",
+    jumlahHantu: 2,
+    kecepatanHantu: 3.0,
+    kecerdasanHantu: 0.35,   // 0 = acak, 1 = selalu mengejar
+    waktuPerSoal: 45,
+    soal: [
+      {
+        pertanyaan: "Revolusi Industri 1.0 yang dimulai di Inggris pada abad ke-18 ditandai oleh penggunaan ...",
+        pilihan: ["Mesin uap untuk menggerakkan alat produksi", "Tenaga listrik dan ban berjalan", "Komputer dan robot otomatis", "Internet of Things dan kecerdasan buatan"],
+        jawabanBenar: 0,
+        pembahasan: "Mesin uap yang disempurnakan James Watt menggantikan tenaga manusia dan hewan, terutama di industri tekstil. Inilah awal mekanisasi produksi."
+      },
+      {
+        pertanyaan: "Pabrik mobil mulai memakai tenaga listrik dan ban berjalan (assembly line) sehingga mobil bisa diproduksi massal dan lebih murah. Ini ciri Revolusi Industri ...",
+        pilihan: ["1.0", "2.0", "3.0", "4.0"],
+        jawabanBenar: 1,
+        pembahasan: "Revolusi Industri 2.0 (akhir abad ke-19 – awal abad ke-20) ditandai listrik dan produksi massal. Contoh terkenal: ban berjalan di pabrik mobil Ford."
+      },
+      {
+        pertanyaan: "Di sebuah pabrik di Kawasan Industri Makassar (KIMA), pengisian botol dikendalikan komputer dan mesin otomatis yang diprogram. Teknologi ini berkembang pesat sejak era ...",
+        pilihan: ["Revolusi Industri 3.0", "Revolusi Industri 1.0", "Revolusi Industri 2.0", "Masa pra-industri"],
+        jawabanBenar: 0,
+        pembahasan: "Revolusi Industri 3.0 (sekitar tahun 1970-an) ditandai elektronika, komputer, dan otomasi produksi."
+      },
+      {
+        pertanyaan: "Saat kamu memesan ojek online, aplikasi otomatis mencari pengemudi terdekat memakai GPS, big data, dan kecerdasan buatan. Teknologi ini ciri khas ...",
+        pilihan: ["Revolusi Industri 4.0", "Revolusi Industri 2.0", "Revolusi Hijau", "Revolusi Industri 1.0"],
+        jawabanBenar: 0,
+        pembahasan: "Revolusi Industri 4.0 menyatukan dunia fisik dan digital lewat internet, IoT, big data, komputasi awan, dan AI. Ojol dan e-commerce adalah contoh nyata di sekitar kita."
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- LEVEL 2
+  {
+    nama: "Magang di Bappeda: Lokasi Industri",
+    ikon: "🗺️",
+    lokasi: "Kantor Perencanaan Daerah",
+    cerita: "Raka magang di Bappeda (Badan Perencanaan Pembangunan Daerah). Kepala bidang memintanya menganalisis mengapa pabrik dibangun di lokasi tertentu—dari pabrik semen di Pangkep sampai smelter nikel di Morowali. Hati-hati, Hantu Macet dan Polusi berkeliaran!",
+    warnaDinding: "#a78bfa",
+    jumlahHantu: 2,
+    kecepatanHantu: 3.3,
+    kecerdasanHantu: 0.45,
+    waktuPerSoal: 45,
+    soal: [
+      {
+        pertanyaan: "Pabrik Semen Tonasa dibangun di Kabupaten Pangkep, dekat bukit batu kapur. Menurut teori lokasi industri Alfred Weber, pabrik ini berorientasi pada ...",
+        pilihan: ["Bahan baku", "Pasar/konsumen", "Tenaga kerja", "Pelabuhan ekspor"],
+        jawabanBenar: 0,
+        pembahasan: "Weber: lokasi industri dipilih agar biaya transportasi minimum. Batu kapur berat dan menyusut saat diolah, jadi pabrik lebih untung bila dekat sumber bahan baku."
+      },
+      {
+        pertanyaan: "Usaha roti dan es batu umumnya didirikan dekat permukiman padat karena produknya cepat rusak atau meleleh. Industri seperti ini berorientasi pada ...",
+        pilihan: ["Pasar", "Bahan baku", "Sumber energi listrik", "Teknologi tinggi"],
+        jawabanBenar: 0,
+        pembahasan: "Produk yang mudah rusak, atau yang lebih berat/besar setelah diolah, lebih efisien diproduksi dekat konsumen (orientasi pasar)."
+      },
+      {
+        pertanyaan: "Industri rokok kretek di Kudus dan industri garmen di Bandung menyerap sangat banyak pekerja. Faktor utama pemilihan lokasinya adalah ketersediaan ...",
+        pilihan: ["Tenaga kerja yang banyak", "Tambang mineral", "Bandara internasional", "Lahan gambut"],
+        jawabanBenar: 0,
+        pembahasan: "Industri padat karya berorientasi tenaga kerja: lokasinya dipilih di daerah yang punya banyak tenaga kerja dengan upah dan keterampilan sesuai."
+      },
+      {
+        pertanyaan: "Nikel dari Sulawesi kini diolah di smelter dalam negeri, misalnya di kawasan industri Morowali (Sulawesi Tengah), bukan diekspor mentah. Kebijakan ini disebut ...",
+        pilihan: ["Hilirisasi industri", "Deindustrialisasi", "Urbanisasi", "Ruralisasi"],
+        jawabanBenar: 0,
+        pembahasan: "Hilirisasi = mengolah bahan mentah menjadi produk setengah jadi/jadi di dalam negeri agar nilai tambah, lapangan kerja, dan pendapatan negara meningkat."
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- LEVEL 3
+  {
+    nama: "Magnet Kota Mamminasata",
+    ikon: "🌆",
+    lokasi: "Makassar – Maros – Gowa – Takalar",
+    cerita: "Setiap pagi jalan dari Maros dan Gowa menuju Makassar padat kendaraan. Mengapa kota besar menjadi magnet bagi daerah sekitarnya? Bantu Raka memahami teori pusat pertumbuhan sebelum Hantu Macet bertambah banyak!",
+    warnaDinding: "#f472b6",
+    jumlahHantu: 3,
+    kecepatanHantu: 3.6,
+    kecerdasanHantu: 0.55,
+    waktuPerSoal: 50,
+    soal: [
+      {
+        pertanyaan: "Teori yang menyatakan pertumbuhan tidak muncul merata, tetapi terpusat pada titik-titik yang memiliki industri unggulan (leading industry), dikemukakan oleh ...",
+        pilihan: ["François Perroux – Kutub Pertumbuhan", "Walter Christaller – Tempat Sentral", "Alfred Weber – Lokasi Industri", "W.W. Rostow – Tahapan Pertumbuhan"],
+        jawabanBenar: 0,
+        pembahasan: "Perroux mengenalkan teori kutub pertumbuhan (growth pole): industri unggulan di suatu titik mendorong pertumbuhan sektor dan wilayah di sekitarnya."
+      },
+      {
+        pertanyaan: "Sebuah minimarket baru hanya bisa bertahan jika ada cukup banyak penduduk di sekitarnya yang rutin berbelanja. Dalam teori tempat sentral Christaller, jumlah penduduk minimum ini disebut ...",
+        pilihan: ["Threshold (ambang penduduk)", "Range (jangkauan)", "Hinterland", "Backwash"],
+        jawabanBenar: 0,
+        pembahasan: "Threshold = jumlah penduduk minimum agar suatu layanan dapat berjalan. Range = jarak maksimum yang mau ditempuh konsumen untuk mendapatkan barang/jasa."
+      },
+      {
+        pertanyaan: "Banyak pemuda dari desa di sekitar Makassar merantau ke kota, sehingga desa kekurangan tenaga kerja produktif dan modal. Menurut Gunnar Myrdal, dampak ini disebut ...",
+        pilihan: ["Backwash effect", "Spread effect", "Trickle down effect", "Multiplier effect"],
+        jawabanBenar: 0,
+        pembahasan: "Backwash effect: pusat pertumbuhan menyedot sumber daya (SDM, modal) dari daerah sekitar. Kebalikannya, spread effect: kemajuan pusat menyebar ke daerah sekitar."
+      },
+      {
+        pertanyaan: "Menurut W.W. Rostow, tahap terakhir pertumbuhan ekonomi ditandai masyarakat berpendapatan tinggi yang banyak membeli barang tahan lama dan jasa. Tahap itu adalah ...",
+        pilihan: ["Era konsumsi massa tinggi", "Masyarakat tradisional", "Prasyarat tinggal landas", "Tinggal landas"],
+        jawabanBenar: 0,
+        pembahasan: "Lima tahap Rostow: masyarakat tradisional → prasyarat tinggal landas → tinggal landas → menuju kedewasaan → era konsumsi massa tinggi."
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- LEVEL 4
+  {
+    nama: "Jejak Ketimpangan Barat–Timur",
+    ikon: "⚖️",
+    lokasi: "Daerah 3T, Indonesia Timur",
+    cerita: "Raka ikut tim relawan pendidikan ke daerah terpencil di Indonesia timur. Ia melihat sendiri bedanya jalan, sekolah, dan sinyal internet dibanding kota besar. Kumpulkan data pembangunan sambil lolos dari Hantu Timpang dan Nganggur!",
+    warnaDinding: "#34d399",
+    jumlahHantu: 3,
+    kecepatanHantu: 3.9,
+    kecerdasanHantu: 0.65,
+    waktuPerSoal: 50,
+    soal: [
+      {
+        pertanyaan: "Ukuran untuk mengetahui ketimpangan pembangunan antarwilayah (misalnya antarkabupaten dalam satu provinsi) berdasarkan PDRB per kapita adalah ...",
+        pilihan: ["Indeks Williamson", "Indeks Gini", "Indeks Harga Konsumen", "Indeks Standar Pencemar Udara"],
+        jawabanBenar: 0,
+        pembahasan: "Indeks Williamson mengukur ketimpangan antarwilayah dari PDRB per kapita dan jumlah penduduk. Indeks Gini mengukur ketimpangan pendapatan antarpenduduk."
+      },
+      {
+        pertanyaan: "Indeks Pembangunan Manusia (IPM) yang dihitung BPS disusun dari tiga dimensi dasar, yaitu ...",
+        pilihan: ["Umur panjang & hidup sehat, pengetahuan, standar hidup layak", "Luas wilayah, jumlah penduduk, jumlah pabrik", "Jalan raya, bandara, pelabuhan", "Ekspor, impor, inflasi"],
+        jawabanBenar: 0,
+        pembahasan: "IPM mengukur kualitas hidup lewat kesehatan (angka harapan hidup), pendidikan (lama sekolah), dan standar hidup layak (pengeluaran per kapita)."
+      },
+      {
+        pertanyaan: "Pemerintah memprioritaskan pembangunan internet dan jalan di daerah 3T. Kepanjangan 3T adalah ...",
+        pilihan: ["Terdepan, Terluar, Tertinggal", "Terpadu, Tertib, Terarah", "Terdekat, Termurah, Tercepat", "Tanah, Tambang, Transportasi"],
+        jawabanBenar: 0,
+        pembahasan: "Daerah 3T (Terdepan, Terluar, Tertinggal) mendapat prioritas infrastruktur, jaringan internet, dan layanan dasar agar pembangunan lebih merata."
+      },
+      {
+        pertanyaan: "Setelah berdiri kawasan industri besar, sawah di sekitarnya berubah menjadi pabrik dan perumahan, serta sungai tercemar limbah. Kondisi ini merupakan ...",
+        pilihan: ["Dampak negatif industrialisasi terhadap lingkungan", "Dampak positif hilirisasi", "Tanda keberhasilan Revolusi Hijau", "Contoh spread effect"],
+        jawabanBenar: 0,
+        pembahasan: "Industrialisasi dapat menyebabkan alih fungsi lahan pertanian dan pencemaran. Karena itu, pembangunan perlu AMDAL dan prinsip pembangunan berkelanjutan."
+      }
+    ]
+  },
+
+  // ---------------------------------------------------------- LEVEL 5
+  {
+    nama: "Festival Inovasi Nusantara 5.0",
+    ikon: "🚀",
+    lokasi: "Festival Inovasi Nasional",
+    cerita: "Babak final! Raka diundang ke Festival Inovasi Nusantara. Tantangannya tentang masa depan: Society 5.0, ekonomi digital, dan pemerataan pembangunan. Semua hantu masalah datang sekaligus—tetap fokus!",
+    warnaDinding: "#fbbf24",
+    jumlahHantu: 4,
+    kecepatanHantu: 4.2,
+    kecerdasanHantu: 0.75,
+    waktuPerSoal: 50,
+    soal: [
+      {
+        pertanyaan: "Peta jalan (roadmap) yang diluncurkan pemerintah Indonesia tahun 2018 untuk menghadapi Revolusi Industri 4.0 bernama ...",
+        pilihan: ["Making Indonesia 4.0", "Repelita I", "Revolusi Hijau Nasional", "Gerakan Kembali ke Desa"],
+        jawabanBenar: 0,
+        pembahasan: "Making Indonesia 4.0 diluncurkan tahun 2018 dengan sektor prioritas awal: makanan-minuman, tekstil & busana, otomotif, elektronik, dan kimia."
+      },
+      {
+        pertanyaan: "Konsep Society 5.0—masyarakat yang memakai AI, IoT, dan big data untuk menyelesaikan masalah sosial dan berpusat pada manusia—pertama kali dicetuskan oleh negara ...",
+        pilihan: ["Jepang", "Jerman", "Amerika Serikat", "Inggris"],
+        jawabanBenar: 0,
+        pembahasan: "Society 5.0 dicetuskan Jepang. Bedanya: Revolusi Industri 4.0 berfokus pada industri/teknologi (istilahnya populer dari Jerman), sedangkan Society 5.0 berfokus pada manusia."
+      },
+      {
+        pertanyaan: "Kak Ani, penjual kopi Toraja kemasan di Makassar, kini menerima pesanan dari Jakarta dan Surabaya melalui marketplace dan media sosial. Ini dampak positif RI 4.0, yaitu ...",
+        pilihan: ["Perluasan pasar UMKM melalui ekonomi digital", "Meningkatnya pengangguran teknologi", "Berkurangnya penggunaan internet", "Kembalinya sistem barter"],
+        jawabanBenar: 0,
+        pembahasan: "Ekonomi digital membuka akses pasar yang jauh lebih luas bagi UMKM, sehingga produk lokal bisa dikenal di seluruh Indonesia bahkan dunia."
+      },
+      {
+        pertanyaan: "Pemindahan ibu kota negara ke Ibu Kota Nusantara (IKN) di Kalimantan Timur salah satunya bertujuan untuk ...",
+        pilihan: ["Mengurangi ketimpangan pembangunan yang terpusat di Pulau Jawa", "Memindahkan seluruh penduduk Jakarta", "Menghentikan pembangunan di luar Jawa", "Menjadikan Kalimantan pusat tambang batu bara"],
+        jawabanBenar: 0,
+        pembahasan: "IKN dirancang sebagai pusat pertumbuhan baru di tengah Indonesia agar pembangunan tidak lagi 'Jawa-sentris' dan lebih merata ke wilayah tengah dan timur."
+      }
+    ]
+  }
+];
+
+// ======================= 3. PETA LABIRIN =======================
+// '#' dinding · '.' koin · 'o' power-up ⚡ · 'A'–'D' pos jawaban · 'P' start pemain · 'G' rumah hantu
+const MAZE = [
+  "###############",
+  "#A.....#.....B#",
+  "#.###.#.#.###.#",
+  "#.............#",
+  "#.##.#####.##.#",
+  "#....#.P.#....#",
+  "##.#.#...#.#.##",
+  "#o...........o#",
+  "#.##.#####.##.#",
+  "#....#GGG#....#",
+  "#.##.#.#.#.##.#",
+  "#C.....o.....D#",
+  "###############"
+];
+
+// Hantu = "masalah pembangunan" yang harus dihindari
+const DATA_HANTU = [
+  { nama: "Macet",    warna: "#ff5fa2" },
+  { nama: "Polusi",   warna: "#a78bfa" },
+  { nama: "Timpang",  warna: "#22d3ee" },
+  { nama: "Nganggur", warna: "#fb923c" }
+];
+
+/* ==========================================================================
+   MESIN GAME (tidak perlu diubah untuk mengganti soal)
+   ========================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+const ROWS = MAZE.length, COLS = MAZE[0].length;
+const DIRS = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
+const OPP = { up:'down', down:'up', left:'right', right:'left' };
+const LETTERS = ['A','B','C','D'];
+const POST_COLORS = { A:'#ef4444', B:'#3b82f6', C:'#22c55e', D:'#f59e0b' };
+const POST_ARROW = { A:'↖ kiri atas', B:'↗ kanan atas', C:'↙ kiri bawah', D:'↘ kanan bawah' };
+const RELEASE_DELAY = [0.8, 2.6, 4.6, 6.6];
+
+let START = null; const GHOST_HOME = []; const POSTS = {};
+MAZE.forEach((row, y) => [...row].forEach((ch, x) => {
+  if (ch === 'P') START = { x, y };
+  else if (ch === 'G') GHOST_HOME.push({ x, y });
+  else if (LETTERS.includes(ch)) POSTS[ch] = { x, y };
+}));
+const isWall = (x, y) => (x < 0 || y < 0 || x >= COLS || y >= ROWS) ? true : MAZE[y][x] === '#';
+const canMove = (x, y, d) => !isWall(x + DIRS[d].x, y + DIRS[d].y);
+
+// ---------- State ----------
+const S = {
+  screen: 'menu', state: 'idle', prevState: null,
+  nama: 'Siswa', kelas: '', score: 0, lives: 3, streak: 0, benar: 0, salah: 0,
+  levelIdx: 0, qIdx: 0, levelQs: [], levelBenar: 0, levelsDone: 0,
+  order: [], correctLetter: 'A', timeLeft: 45, timeMax: 45, elapsedQ: 0,
+  fright: 0, invuln: 0, readyT: 0, tile: 32, log: []
+};
+let player = null, ghosts = [], pellets = [], tokens = [], floats = [], parts = [];
+let soundOn = true, AC = null, lastWaka = 0, wakaAlt = false;
+
+const cv = $('cv'); const ctx = cv.getContext('2d');
+let dpr = Math.max(1, window.devicePixelRatio || 1);
+const wallCache = document.createElement('canvas');
+
+const curLevel = () => LEVEL_GAME[S.levelIdx];
+const curQ = () => S.levelQs[S.qIdx];
+
+// ======================= SUARA =======================
+function tone(f, d = 0.1, type = 'square', vol = 0.05, delay = 0) {
+  if (!soundOn) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.value = f; g.gain.value = vol;
+    o.connect(g); g.connect(AC.destination);
+    const t = AC.currentTime + delay;
+    o.start(t); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d); o.stop(t + d + 0.03);
+  } catch (e) {}
+}
+const sfx = {
+  waka()   { const now = performance.now(); if (now - lastWaka < 90) return; lastWaka = now; wakaAlt = !wakaAlt; tone(wakaAlt ? 320 : 460, 0.07, 'triangle', 0.04); },
+  benar()  { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.14, 'square', 0.05, i * 0.08)); },
+  salah()  { tone(220, 0.25, 'sawtooth', 0.05); tone(150, 0.35, 'sawtooth', 0.05, 0.18); },
+  hit()    { [600, 450, 300, 180].forEach((f, i) => tone(f, 0.12, 'square', 0.05, i * 0.07)); },
+  power()  { [300, 500, 700].forEach((f, i) => tone(f, 0.1, 'triangle', 0.06, i * 0.05)); },
+  eat()    { tone(880, 0.08, 'square', 0.05); tone(1200, 0.1, 'square', 0.05, 0.06); },
+  go()     { tone(660, 0.12, 'square', 0.05); tone(990, 0.18, 'square', 0.05, 0.12); },
+  menang() { [523, 659, 784, 659, 784, 1046].forEach((f, i) => tone(f, 0.16, 'square', 0.05, i * 0.12)); }
+};
+function toggleSound() { soundOn = !soundOn; $('btnSound').textContent = soundOn ? '🔊' : '🔇'; }
+
+// ======================= LAYAR & MODAL =======================
+function showScreen(name) {
+  S.screen = name;
+  $('scrMenu').classList.toggle('hidden', name !== 'menu');
+  $('scrGame').classList.toggle('hidden', name !== 'game');
+}
+function showModal(html) {
+  const m = $('modal'), box = $('modalBox');
+  box.innerHTML = html; box.scrollTop = 0;
+  box.classList.remove('pop-in'); void box.offsetWidth; box.classList.add('pop-in');
+  m.classList.remove('hidden'); m.classList.add('flex');
+}
+function hideModal() { const m = $('modal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+const modalOpen = () => !$('modal').classList.contains('hidden');
+
+function flash(color) { const f = $('flash'); f.style.background = color; f.classList.remove('flash-go'); void f.offsetWidth; f.classList.add('flash-go'); }
+function shake() { const a = $('arenaWrap'); a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); }
+function confetti(n = 90) {
+  const cols = ['#f43f5e', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#facc15'];
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement('div'); c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw'; c.style.background = cols[i % cols.length];
+    c.style.animationDuration = (2 + Math.random() * 2.5) + 's'; c.style.animationDelay = Math.random() * 0.6 + 's';
+    c.style.borderRadius = Math.random() > .5 ? '50%' : '2px';
+    document.body.appendChild(c); setTimeout(() => c.remove(), 5500);
+  }
+}
+const BTN = (cls) => `btn-3d w-full rounded-2xl ${cls} text-white font-display text-xl py-3`;
+
+// ======================= UKURAN CANVAS =======================
+function resize() {
+  if (S.screen !== 'game') return;
+  dpr = Math.max(1, window.devicePixelRatio || 1);
+  const wrap = $('arenaWrap');
+  const w = wrap.clientWidth - 16;
+  const lg = window.innerWidth >= 1024;
+  const maxH = lg ? window.innerHeight - 130 : Math.max(240, window.innerHeight * 0.48);
+  const T = Math.max(14, Math.floor(Math.min(w / COLS, maxH / ROWS)));
+  S.tile = T;
+  cv.width = COLS * T * dpr; cv.height = ROWS * T * dpr;
+  cv.style.width = COLS * T + 'px'; cv.style.height = ROWS * T + 'px';
+  buildWallCache();
+}
+function buildWallCache() {
+  const T = S.tile, lv = curLevel();
+  wallCache.width = COLS * T * dpr; wallCache.height = ROWS * T * dpr;
+  const c = wallCache.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.fillStyle = '#0b1026'; c.fillRect(0, 0, COLS * T, ROWS * T);
+  const neon = lv ? lv.warnaDinding : '#38bdf8';
+  // Dinding gaya "pipa neon" khas Pac-Man: garis tebal neon lalu isi gelap di tengah
+  const pipes = (width, color, blur) => {
+    c.strokeStyle = color; c.fillStyle = color; c.lineWidth = width; c.lineCap = 'round';
+    c.shadowColor = neon; c.shadowBlur = blur;
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      if (!isWall(x, y)) continue;
+      const cx = (x + .5) * T, cy = (y + .5) * T;
+      c.beginPath(); c.arc(cx, cy, width / 2, 0, 7); c.fill();
+      c.beginPath();
+      if (x + 1 < COLS && isWall(x + 1, y)) { c.moveTo(cx, cy); c.lineTo(cx + T, cy); }
+      if (y + 1 < ROWS && isWall(x, y + 1)) { c.moveTo(cx, cy); c.lineTo(cx, cy + T); }
+      c.stroke();
+    }
+  };
+  pipes(T * 0.5, neon, T * 0.4);
+  pipes(T * 0.26, '#0f1536', 0);
+  c.shadowBlur = 0;
+}
+
+// ======================= ALUR PERMAINAN =======================
+function mulaiGame() {
+  S.nama = ($('inNama').value.trim() || 'Siswa').slice(0, 20);
+  S.kelas = $('inKelas').value.trim().slice(0, 10);
+  const startIdx = parseInt($('inLevel').value, 10) || 0;
+  Object.assign(S, { score: 0, lives: PENGATURAN.nyawaAwal, streak: 0, benar: 0, salah: 0, levelsDone: 0, log: [] });
+  showScreen('game');
+  startLevel(startIdx);
+}
+
+function startLevel(i) {
+  S.levelIdx = i; S.qIdx = 0; S.levelBenar = 0;
+  const lv = curLevel();
+  S.levelQs = PENGATURAN.acakUrutanSoal ? shuffle(lv.soal) : lv.soal.slice();
+  initPellets();
+  ghosts = [];
+  for (let k = 0; k < Math.min(lv.jumlahHantu, DATA_HANTU.length); k++) ghosts.push({ ...DATA_HANTU[k], idx: k });
+  S.state = 'intro';
+  resize(); updateHUD();
+  renderQuestionPlaceholder();
+  const chips = ghosts.map(g => `<span class="px-3 py-1 rounded-full text-white text-sm font-bold" style="background:${g.warna}">👻 ${esc(g.nama)}</span>`).join(' ');
+  showModal(`
+    <div class="text-center">
+      <div class="text-6xl bob">${lv.ikon || '🎯'}</div>
+      <div class="mt-2 inline-block px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 font-bold text-sm">LEVEL ${i + 1} dari ${LEVEL_GAME.length}</div>
+      <h2 class="font-display text-3xl mt-2 text-slate-800">${esc(lv.nama)}</h2>
+      <p class="text-sm text-slate-500">📍 ${esc(lv.lokasi || '')}</p>
+    </div>
+    <p class="mt-4 text-slate-700 leading-relaxed bg-amber-50 border border-amber-200 rounded-2xl p-4">${esc(lv.cerita)}</p>
+    <div class="mt-4 text-sm"><b>Hantu masalah di level ini:</b><div class="mt-2 flex flex-wrap gap-2">${chips}</div></div>
+    <div class="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
+      <div class="bg-sky-50 rounded-xl p-2"><div class="font-display text-xl">${lv.soal.length}</div>soal</div>
+      <div class="bg-rose-50 rounded-xl p-2"><div class="font-display text-xl">${lv.waktuPerSoal || PENGATURAN.waktuPerSoalDefault}s</div>per soal</div>
+      <div class="bg-emerald-50 rounded-xl p-2"><div class="font-display text-xl">${'❤️'.repeat(Math.max(0, S.lives))}</div>nyawa</div>
+    </div>
+    <button data-primary onclick="hideModal();beginQuestion()" class="${BTN('bg-gradient-to-r from-amber-400 to-orange-500')} mt-5">Ayo Mulai! 🛵</button>
+  `);
+}
+
+function initPellets() {
+  pellets = MAZE.map(row => [...row].map(ch => ch === '.' ? 1 : ch === 'o' ? 2 : 0));
+}
+function pelletsLeft() { let n = 0; for (const r of pellets) for (const v of r) if (v) n++; return n; }
+
+function beginQuestion() {
+  const q = curQ(), lv = curLevel();
+  const n = Math.min(4, q.pilihan.length);
+  const idx = [...Array(n).keys()];
+  S.order = PENGATURAN.acakPilihan ? shuffle(idx) : idx;
+  S.correctLetter = LETTERS[S.order.indexOf(q.jawabanBenar)];
+  tokens = S.order.map((_, k) => ({ letter: LETTERS[k], x: POSTS[LETTERS[k]].x, y: POSTS[LETTERS[k]].y, color: POST_COLORS[LETTERS[k]] }));
+  S.timeMax = lv.waktuPerSoal || PENGATURAN.waktuPerSoalDefault;
+  S.timeLeft = S.timeMax; S.elapsedQ = 0; S.fright = 0; S.invuln = 0;
+  resetActors();
+  renderQuestion();
+  S.state = 'ready'; S.readyT = 1.4;
+  updateHUD();
+}
+
+function resetActors() {
+  player = { x: START.x, y: START.y, tx: START.x, ty: START.y, moving: false, dir: 'right', next: null };
+  ghosts.forEach((g, i) => {
+    const h = GHOST_HOME[i % GHOST_HOME.length];
+    Object.assign(g, { x: h.x, y: h.y, tx: h.x, ty: h.y, moving: false, dir: 'up', active: false, release: S.elapsedQ + RELEASE_DELAY[i] });
+  });
+}
+
+function addScore(n, big) {
+  S.score += n; $('hudScore').textContent = S.score;
+  if (big) { const el = $('hudScore'); el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+}
+
+function answer(letter) {
+  if (S.state !== 'play') return;
+  const q = curQ(); S.state = 'feedback';
+  const ok = letter === S.correctLetter;
+  const dipilih = letter ? q.pilihan[S.order[LETTERS.indexOf(letter)]] : null;
+  const tk = tokens.find(t => t.letter === (letter || S.correctLetter));
+  let gained = 0;
+  if (ok) {
+    S.streak++; S.benar++; S.levelBenar++;
+    const mult = Math.min(2, 1 + (S.streak - 1) * 0.25);
+    gained = Math.round((PENGATURAN.poinBenar + PENGATURAN.bonusWaktuMaks * S.timeLeft / S.timeMax) * mult);
+    addScore(gained, true); sfx.benar(); flash('#22c55e');
+    burst(tk.x, tk.y, ['#facc15', '#22c55e', '#fff', tk.color], 40);
+    addFloat(tk.x, tk.y, '+' + gained, '#facc15');
+  } else {
+    S.streak = 0; S.salah++; S.lives--;
+    sfx.salah(); flash('#ef4444'); shake();
+    if (letter) addFloat(tk.x, tk.y, '✗ Salah', '#f87171');
+  }
+  S.log.push({ level: S.levelIdx + 1, pertanyaan: q.pertanyaan, dipilih, benar: q.pilihan[q.jawabanBenar], ok });
+  updateHUD();
+  setTimeout(() => showFeedback(ok, gained, dipilih, q, letter === null), 700);
+}
+
+function showFeedback(ok, gained, dipilih, q, timeout) {
+  const last = S.lives <= 0;
+  showModal(`
+    <div class="text-center">
+      <div class="text-6xl ${ok ? 'bob' : ''}">${ok ? '🎉' : (timeout ? '⏰' : '😵')}</div>
+      <h2 class="font-display text-3xl mt-1 ${ok ? 'text-emerald-600' : 'text-rose-600'}">${ok ? 'Tepat Sekali!' : (timeout ? 'Waktu Habis!' : 'Kurang Tepat')}</h2>
+      ${ok ? `<p class="font-display text-xl text-amber-500">+${gained} poin ${S.streak >= 2 ? `· Combo ${S.streak}x 🔥` : ''}</p>`
+           : `<p class="font-bold text-rose-500">−1 nyawa · sisa ${'❤️'.repeat(Math.max(0, S.lives)) || '0'}</p>`}
+    </div>
+    ${!ok && dipilih ? `<div class="mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-sm"><b>Jawabanmu:</b> ${esc(dipilih)}</div>` : ''}
+    <div class="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm"><b>✅ Jawaban benar:</b> ${esc(q.pilihan[q.jawabanBenar])}</div>
+    <div class="mt-3 p-4 rounded-xl bg-indigo-50 text-slate-700 text-sm leading-relaxed"><div class="font-bold text-indigo-600 mb-1">📘 Pembahasan</div>${esc(q.pembahasan)}</div>
+    <button data-primary onclick="nextQuestion()" class="${BTN(last ? 'bg-rose-500' : 'bg-indigo-500')} mt-5">${last ? 'Lihat Hasil 📊' : 'Lanjut ➜'}</button>
+  `);
+}
+
+function nextQuestion() {
+  hideModal();
+  if (S.lives <= 0) { endGame(false); return; }
+  S.qIdx++;
+  if (S.qIdx >= S.levelQs.length) levelDone(); else beginQuestion();
+}
+
+function levelDone() {
+  S.state = 'intro'; S.levelsDone = Math.max(S.levelsDone, S.levelIdx + 1);
+  const total = S.levelQs.length, ratio = S.levelBenar / total;
+  const stars = ratio >= 1 ? 3 : ratio >= 0.5 ? 2 : ratio > 0 ? 1 : 0;
+  const isLast = S.levelIdx >= LEVEL_GAME.length - 1;
+  let bonusText = '';
+  if (!isLast && S.lives < PENGATURAN.nyawaMaksimal) { S.lives++; bonusText = '<p class="mt-2 font-bold text-rose-500">Bonus +1 ❤️ untuk level berikutnya!</p>'; }
+  sfx.menang(); if (stars === 3) confetti(60);
+  updateHUD();
+  showModal(`
+    <div class="text-center">
+      <div class="text-5xl">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+      <h2 class="font-display text-3xl mt-2">Level ${S.levelIdx + 1} Selesai!</h2>
+      <p class="text-slate-500">${esc(curLevel().nama)}</p>
+      <div class="mt-4 grid grid-cols-2 gap-3">
+        <div class="bg-emerald-50 rounded-2xl p-3"><div class="font-display text-3xl text-emerald-600">${S.levelBenar}/${total}</div><div class="text-sm">jawaban benar</div></div>
+        <div class="bg-amber-50 rounded-2xl p-3"><div class="font-display text-3xl text-amber-500">${S.score}</div><div class="text-sm">total skor</div></div>
+      </div>
+      ${bonusText}
+    </div>
+    ${isLast
+      ? `<button data-primary onclick="hideModal();endGame(true)" class="${BTN('bg-gradient-to-r from-pink-500 to-indigo-500')} mt-5">Lihat Hasil Akhir 🏆</button>`
+      : `<button data-primary onclick="hideModal();startLevel(${S.levelIdx + 1})" class="${BTN('bg-gradient-to-r from-amber-400 to-orange-500')} mt-5">Lanjut ke Level ${S.levelIdx + 2} ➜</button>`}
+  `);
+}
+
+function predikat(acc) {
+  if (acc >= 90) return ['🏅', 'Ahli Pembangunan Wilayah'];
+  if (acc >= 75) return ['🥈', 'Perencana Wilayah Andal'];
+  if (acc >= 50) return ['📗', 'Analis Muda'];
+  return ['💪', 'Terus Belajar, Kamu Pasti Bisa!'];
+}
+
+function endGame(win) {
+  S.state = 'over';
+  const total = S.benar + S.salah;
+  const acc = total ? Math.round(S.benar / total * 100) : 0;
+  const rank = lbAdd({ nama: S.nama, kelas: S.kelas, skor: S.score, benar: S.benar, total, level: S.levelsDone, tanggal: new Date().toLocaleDateString('id-ID') });
+  const [ik, pred] = predikat(acc);
+  if (win) { sfx.menang(); confetti(); } else sfx.hit();
+  const salahList = S.log.filter(l => !l.ok);
+  const review = salahList.length ? `
+    <details class="mt-4 bg-slate-50 rounded-2xl p-3 text-sm">
+      <summary class="font-bold cursor-pointer">📝 Tinjau ${salahList.length} soal yang perlu dipelajari lagi</summary>
+      <ol class="mt-2 space-y-2 list-decimal pl-5">
+        ${salahList.map(l => `<li><div>${esc(l.pertanyaan)}</div><div class="text-emerald-700 font-semibold">✅ ${esc(l.benar)}</div></li>`).join('')}
+      </ol>
+    </details>` : `<p class="mt-4 text-center font-bold text-emerald-600">Sempurna! Tidak ada jawaban salah 🎯</p>`;
+  showModal(`
+    <div class="text-center">
+      <div class="text-6xl bob">${win ? '🏆' : '💔'}</div>
+      <h2 class="font-display text-3xl mt-1">${win ? 'Misi Berhasil!' : 'Permainan Berakhir'}</h2>
+      <p class="text-slate-500">${esc(S.nama)}${S.kelas ? ' · ' + esc(S.kelas) : ''}</p>
+      <div class="mt-4 grid grid-cols-3 gap-2">
+        <div class="bg-amber-50 rounded-2xl p-3"><div class="font-display text-2xl text-amber-500">${S.score}</div><div class="text-xs">skor</div></div>
+        <div class="bg-emerald-50 rounded-2xl p-3"><div class="font-display text-2xl text-emerald-600">${S.benar}/${total}</div><div class="text-xs">benar</div></div>
+        <div class="bg-sky-50 rounded-2xl p-3"><div class="font-display text-2xl text-sky-600">${acc}%</div><div class="text-xs">akurasi</div></div>
+      </div>
+      <div class="mt-3 p-3 rounded-2xl bg-gradient-to-r from-indigo-50 to-pink-50 font-bold">${ik} Predikat: ${pred}</div>
+      ${rank > 0 && rank <= PENGATURAN.jumlahPapanSkor ? `<p class="mt-2 font-bold text-indigo-600">Kamu masuk peringkat #${rank} papan skor!</p>` : ''}
+    </div>
+    ${review}
+    <div class="mt-5 grid gap-3">
+      <button data-primary onclick="hideModal();mulaiGame()" class="${BTN('bg-gradient-to-r from-amber-400 to-orange-500')}">🔁 Main Lagi</button>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="tampilPapanSkor()" class="btn-3d rounded-2xl bg-indigo-500 text-white font-bold py-3">🏆 Papan Skor</button>
+        <button onclick="keMenu()" class="btn-3d rounded-2xl bg-slate-500 text-white font-bold py-3">🏠 Menu</button>
+      </div>
+    </div>
+  `);
+}
+
+function keMenu() { hideModal(); S.state = 'idle'; showScreen('menu'); }
+
+function togglePause() {
+  if (S.screen !== 'game') return;
+  if (S.state === 'pause') { hideModal(); S.state = S.prevState || 'play'; return; }
+  if (S.state !== 'play' && S.state !== 'ready') return;
+  S.prevState = S.state; S.state = 'pause';
+  showModal(`
+    <div class="text-center"><div class="text-6xl">⏸️</div><h2 class="font-display text-3xl mt-2">Permainan Dijeda</h2>
+    <p class="text-slate-500 mt-1">Skor saat ini: <b>${S.score}</b></p></div>
+    <div class="mt-5 grid gap-3">
+      <button data-primary onclick="togglePause()" class="${BTN('bg-emerald-500')}">▶ Lanjutkan</button>
+      <button onclick="tampilCaraMain(true)" class="btn-3d rounded-2xl bg-sky-500 text-white font-bold py-3">❓ Cara Main</button>
+      <button onclick="if(confirm('Keluar ke menu? Progres permainan ini akan hilang.')) keMenu()" class="btn-3d rounded-2xl bg-slate-500 text-white font-bold py-3">🏠 Keluar ke Menu</button>
+    </div>`);
+}
+
+// ======================= PANEL SOAL & HUD =======================
+function renderQuestionPlaceholder() {
+  $('qPanel').innerHTML = `<div class="text-center py-6 text-slate-400 font-bold">Bersiap untuk level ${S.levelIdx + 1}…</div>`;
+}
+function renderQuestion() {
+  const q = curQ();
+  const opts = S.order.map((oi, k) => {
+    const L = LETTERS[k], c = POST_COLORS[L];
+    return `<div class="flex items-start gap-2 p-2 rounded-xl border-2 bg-white" style="border-color:${c}40">
+      <span class="shrink-0 w-9 h-9 rounded-full text-white font-display text-lg flex items-center justify-center shadow" style="background:${c}">${L}</span>
+      <span class="text-sm sm:text-[15px] font-semibold leading-snug pt-1">${esc(q.pilihan[oi])}</span>
+      <span class="ml-auto shrink-0 text-[10px] sm:text-xs font-bold pt-2 whitespace-nowrap" style="color:${c}">${POST_ARROW[L]}</span>
+    </div>`;
+  }).join('');
+  $('qPanel').innerHTML = `
+    <div class="pop-in">
+      <div class="flex items-center justify-between text-xs font-bold">
+        <span class="text-indigo-600">${esc(curLevel().ikon || '')} SOAL ${S.qIdx + 1} / ${S.levelQs.length}</span>
+        <span class="hidden sm:inline text-slate-400">Antar paket ke pos jawaban! 🛵</span>
+      </div>
+      <p class="mt-2 font-bold text-slate-800 text-[15px] sm:text-lg leading-snug">${esc(q.pertanyaan)}</p>
+      <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">${opts}</div>
+    </div>`;
+}
+function updateHUD() {
+  $('hudLevel').textContent = `Level ${S.levelIdx + 1}/${LEVEL_GAME.length}`;
+  $('hudLevelName').textContent = curLevel() ? curLevel().nama : '';
+  $('hudScore').textContent = S.score;
+  $('hudLives').textContent = S.lives > 0 ? '❤️'.repeat(S.lives) : '💔';
+  const mult = Math.min(2, 1 + (S.streak - 1) * 0.25);
+  $('hudCombo').textContent = S.streak >= 2 ? `🔥 ${S.streak}x (×${mult.toFixed(2)})` : '';
+  updateTimerHUD();
+}
+function updateTimerHUD() {
+  const p = Math.max(0, S.timeLeft / S.timeMax);
+  const bar = $('hudTimerBar'), txt = $('hudTimerText');
+  bar.style.width = (p * 100) + '%';
+  bar.className = 'h-full rounded-full transition-[width] duration-200 ' + (p > 0.5 ? 'bg-emerald-500' : p > 0.25 ? 'bg-amber-400' : 'bg-rose-500');
+  txt.textContent = Math.ceil(S.timeLeft);
+  txt.classList.toggle('pulse-red', p <= 0.25 && S.state === 'play');
+}
+
+// ======================= GERAK & AI =======================
+function stepEntity(e, dist, decide, onArrive) {
+  let guard = 0;
+  while (dist > 1e-6 && guard++ < 8) {
+    if (!e.moving) {
+      const d = decide(e);
+      if (!d) return;
+      e.dir = d; e.tx = e.x + DIRS[d].x; e.ty = e.y + DIRS[d].y; e.moving = true;
+    }
+    const rem = Math.abs(e.tx - e.x) + Math.abs(e.ty - e.y);
+    if (rem <= dist) {
+      e.x = e.tx; e.y = e.ty; e.moving = false; dist -= rem;
+      if (onArrive && onArrive(e) === false) return;
+    } else {
+      e.x += Math.sign(e.tx - e.x) * dist; e.y += Math.sign(e.ty - e.y) * dist; dist = 0;
+    }
+  }
+}
+function reverse(e) { if (e.moving) { e.tx -= DIRS[e.dir].x; e.ty -= DIRS[e.dir].y; e.dir = OPP[e.dir]; } else e.dir = OPP[e.dir]; }
+
+function decidePlayer(p) {
+  if (p.next && canMove(p.x, p.y, p.next)) return p.next;
+  if (p.dir && canMove(p.x, p.y, p.dir)) return p.dir;
+  return null;
+}
+function arrivePlayer(p) {
+  const v = pellets[p.y][p.x];
+  if (v === 1) { pellets[p.y][p.x] = 0; addScore(PENGATURAN.poinPelet); sfx.waka(); }
+  else if (v === 2) {
+    pellets[p.y][p.x] = 0; addScore(10, true); S.fright = PENGATURAN.durasiPowerUp; sfx.power();
+    addFloat(p.x, p.y, '⚡ Energi Terbarukan!', '#34d399');
+    ghosts.forEach(g => { if (g.active) reverse(g); });
+  }
+  if (pelletsLeft() === 0) { initPellets(); addScore(50, true); addFloat(p.x, p.y, '🌿 Kota Bersih! +50', '#86efac'); }
+  const tk = tokens.find(t => t.x === p.x && t.y === p.y);
+  if (tk) { answer(tk.letter); return false; }
+  return true;
+}
+function decideGhost(g) {
+  let opts = Object.keys(DIRS).filter(d => canMove(g.x, g.y, d) && d !== OPP[g.dir]);
+  if (!opts.length) opts = Object.keys(DIRS).filter(d => canMove(g.x, g.y, d));
+  if (!opts.length) return null;
+  const distTo = d => Math.hypot(g.x + DIRS[d].x - player.x, g.y + DIRS[d].y - player.y);
+  if (S.fright > 0) {
+    if (Math.random() < 0.3) return opts[Math.floor(Math.random() * opts.length)];
+    return opts.reduce((a, b) => distTo(b) > distTo(a) ? b : a);
+  }
+  if (Math.random() < curLevel().kecerdasanHantu) return opts.reduce((a, b) => distTo(b) < distTo(a) ? b : a);
+  return opts[Math.floor(Math.random() * opts.length)];
+}
+function caught(g) {
+  S.lives--; S.streak = 0;
+  sfx.hit(); flash('#ef4444'); shake();
+  addFloat(player.x, player.y, `Tertangkap ${g.nama}!`, '#f87171');
+  updateHUD();
+  if (S.lives <= 0) {
+    S.state = 'feedback';
+    setTimeout(endGame.bind(null, false), 1000);
+    return;
+  }
+  resetActors(); S.invuln = 1.5; S.state = 'ready'; S.readyT = 1.1;
+}
+function eatGhost(g) {
+  addScore(PENGATURAN.poinHantu, true); sfx.eat();
+  addFloat(g.x, g.y, `${g.nama} diatasi! +${PENGATURAN.poinHantu}`, '#93c5fd');
+  burst(g.x, g.y, [g.warna, '#fff'], 18);
+  const h = GHOST_HOME[g.idx % GHOST_HOME.length];
+  Object.assign(g, { x: h.x, y: h.y, tx: h.x, ty: h.y, moving: false, dir: 'up', active: false, release: S.elapsedQ + 2.5 });
+}
+
+// ======================= EFEK =======================
+function addFloat(x, y, text, color) { floats.push({ x: x + 0.5, y: y + 0.2, text, color, life: 1.3 }); }
+function burst(x, y, colors, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 5;
+    parts.push({ x: x + 0.5, y: y + 0.5, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.6 + Math.random() * 0.5, c: colors[i % colors.length] });
+  }
+}
+
+// ======================= UPDATE =======================
+function update(dt) {
+  floats.forEach(f => { f.y -= dt * 1.1; f.life -= dt; }); floats = floats.filter(f => f.life > 0);
+  parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; p.life -= dt; }); parts = parts.filter(p => p.life > 0);
+
+  if (S.state === 'ready') { S.readyT -= dt; if (S.readyT <= 0) { S.state = 'play'; sfx.go(); } return; }
+  if (S.state !== 'play') return;
+
+  S.elapsedQ += dt; S.timeLeft -= dt;
+  if (S.invuln > 0) S.invuln -= dt;
+  if (S.fright > 0) S.fright -= dt;
+  if (S.timeLeft <= 0) { S.timeLeft = 0; updateTimerHUD(); answer(null); return; }
+
+  if (player.moving && player.next && player.next === OPP[player.dir]) reverse(player);
+  stepEntity(player, PENGATURAN.kecepatanPemain * dt, decidePlayer, arrivePlayer);
+  if (S.state !== 'play') return;
+
+  const lv = curLevel();
+  for (const g of ghosts) {
+    if (!g.active) { if (S.elapsedQ >= g.release) g.active = true; else continue; }
+    stepEntity(g, (S.fright > 0 ? lv.kecepatanHantu * 0.55 : lv.kecepatanHantu) * dt, decideGhost, null);
+  }
+  for (const g of ghosts) {
+    if (!g.active) continue;
+    if (Math.hypot(g.x - player.x, g.y - player.y) < 0.65) {
+      if (S.fright > 0) eatGhost(g);
+      else if (S.invuln <= 0) { caught(g); return; }
+    }
+  }
+  updateTimerHUD();
+}
+
+// ======================= GAMBAR =======================
+function draw(t) {
+  const T = S.tile;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.drawImage(wallCache, 0, 0, COLS * T, ROWS * T);
+  if (!player) return;
+
+  // koin & power-up
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    const v = pellets[y] && pellets[y][x];
+    if (!v) continue;
+    const cx = (x + .5) * T, cy = (y + .5) * T;
+    if (v === 1) { ctx.fillStyle = '#fde68a'; ctx.beginPath(); ctx.arc(cx, cy, T * 0.09, 0, 7); ctx.fill(); }
+    else {
+      const r = T * (0.2 + 0.05 * Math.sin(t * 6));
+      ctx.fillStyle = '#34d399'; ctx.shadowColor = '#34d399'; ctx.shadowBlur = T * 0.5;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = '#064e3b'; ctx.font = `700 ${T * 0.28}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('⚡', cx, cy + 1);
+    }
+  }
+
+  // pos jawaban
+  tokens.forEach((tk, i) => {
+    const cx = (tk.x + .5) * T, cy = (tk.y + .5) * T;
+    const r = T * 0.42 * (1 + 0.07 * Math.sin(t * 5 + i));
+    ctx.save();
+    ctx.setLineDash([T * 0.14, T * 0.1]); ctx.lineDashOffset = -t * 25;
+    ctx.strokeStyle = tk.color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, r * 1.22, 0, 7); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = tk.color; ctx.shadowColor = tk.color; ctx.shadowBlur = T * 0.6;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(2, T * 0.06); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = `700 ${T * 0.5}px Fredoka, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(tk.letter, cx, cy + 1);
+  });
+
+  // hantu
+  ghosts.forEach(g => drawGhost(g, T, t));
+
+  // pemain
+  if (!(S.invuln > 0 && Math.floor(t * 12) % 2)) drawPlayer(T, t);
+
+  // partikel & teks melayang
+  parts.forEach(p => { ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x * T, p.y * T, T * 0.08, 0, 7); ctx.fill(); });
+  ctx.globalAlpha = 1;
+  floats.forEach(f => {
+    ctx.globalAlpha = Math.min(1, f.life * 1.5);
+    ctx.font = `800 ${Math.max(11, T * 0.36)}px "Plus Jakarta Sans", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#0b1026'; ctx.strokeText(f.text, f.x * T, f.y * T);
+    ctx.fillStyle = f.color; ctx.fillText(f.text, f.x * T, f.y * T);
+  });
+  ctx.globalAlpha = 1;
+
+  // overlay siap / jeda
+  if (S.state === 'ready' || S.state === 'pause') {
+    ctx.fillStyle = 'rgba(11,16,38,.45)'; ctx.fillRect(0, 0, COLS * T, ROWS * T);
+    const txt = S.state === 'pause' ? 'JEDA' : (S.readyT > 0.5 ? 'SIAP?' : 'GAS! 🛵');
+    const sc = 1 + 0.08 * Math.sin(t * 10);
+    ctx.save(); ctx.translate(COLS * T / 2, ROWS * T / 2); ctx.scale(sc, sc);
+    ctx.font = `700 ${T * 1.3}px Fredoka, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 8; ctx.strokeStyle = '#0b1026'; ctx.strokeText(txt, 0, 0);
+    ctx.fillStyle = '#facc15'; ctx.fillText(txt, 0, 0); ctx.restore();
+  }
+}
+
+function drawPlayer(T, t) {
+  const p = player, cx = (p.x + .5) * T, cy = (p.y + .5) * T, r = T * 0.43;
+  const mouth = (p.moving ? 0.04 + 0.22 * Math.abs(Math.sin(t * 14)) : 0.12) * Math.PI;
+  ctx.save(); ctx.translate(cx, cy);
+  if (p.dir === 'left') ctx.scale(-1, 1);
+  else ctx.rotate({ right: 0, down: Math.PI / 2, up: -Math.PI / 2 }[p.dir] || 0);
+  ctx.fillStyle = '#facc15'; ctx.shadowColor = '#facc15'; ctx.shadowBlur = T * 0.4;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, mouth, Math.PI * 2 - mouth); ctx.closePath(); ctx.fill();
+  ctx.shadowBlur = 0;
+  // helm ojol hijau
+  ctx.fillStyle = '#16a34a';
+  ctx.beginPath(); ctx.arc(-r * 0.1, 0, r, Math.PI * 1.08, Math.PI * 1.62); ctx.lineTo(-r * 0.1, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(r * 0.18, -r * 0.48, r * 0.12, 0, 7); ctx.fill();
+  ctx.restore();
+}
+
+function drawGhost(g, T, t) {
+  const cx = (g.x + .5) * T, cy = (g.y + .5) * T, r = T * 0.42;
+  const fr = S.fright > 0 && g.active;
+  const col = fr ? (S.fright < 1.5 && Math.floor(t * 8) % 2 ? '#e2e8f0' : '#2563eb') : g.warna;
+  ctx.globalAlpha = g.active ? 1 : 0.55;
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.arc(cx, cy - r * 0.1, r, Math.PI, 0);
+  const bottom = cy + r * 0.85; ctx.lineTo(cx + r, bottom);
+  const off = Math.sin(t * 12) * r * 0.08;
+  for (let i = 1; i <= 6; i++) ctx.lineTo(cx + r - (2 * r) * i / 6, bottom + (i % 2 ? -r * 0.22 + off : 0));
+  ctx.closePath(); ctx.fill();
+  if (fr) {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(cx - r * 0.3, cy - r * 0.2, r * 0.1, 0, 7); ctx.arc(cx + r * 0.3, cy - r * 0.2, r * 0.1, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0; i <= 4; i++) ctx.lineTo(cx - r * 0.45 + i * r * 0.225, cy + r * 0.3 + (i % 2 ? -r * 0.1 : 0));
+    ctx.stroke();
+  } else {
+    const d = DIRS[g.dir] || { x: 0, y: 0 };
+    [-1, 1].forEach(s => {
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(cx + s * r * 0.35, cy - r * 0.2, r * 0.24, r * 0.3, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(cx + s * r * 0.35 + d.x * r * 0.1, cy - r * 0.2 + d.y * r * 0.12, r * 0.12, 0, 7); ctx.fill();
+    });
+  }
+  // label nama hantu
+  const fs = Math.max(9, T * 0.27);
+  ctx.font = `800 ${fs}px "Plus Jakarta Sans", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const label = fr ? 'Takut!' : g.nama, w = ctx.measureText(label).width + 8, ly = cy - r - fs * 0.7;
+  ctx.fillStyle = 'rgba(11,16,38,.75)'; ctx.fillRect(cx - w / 2, ly - fs * 0.6, w, fs * 1.2);
+  ctx.fillStyle = fr ? '#bfdbfe' : g.warna; ctx.fillText(label, cx, ly);
+  ctx.globalAlpha = 1;
+}
+
+// ======================= PAPAN SKOR (localStorage) =======================
+const LB_KEY = 'geopac_papan_skor_v1';
+let lbMemory = [];
+function lbLoad() { try { const v = JSON.parse(localStorage.getItem(LB_KEY)); return Array.isArray(v) ? v : lbMemory; } catch (e) { return lbMemory; } }
+function lbStore(list) { lbMemory = list; try { localStorage.setItem(LB_KEY, JSON.stringify(list)); } catch (e) {} }
+function lbAdd(entry) {
+  entry.id = Date.now() + Math.random();
+  const list = lbLoad(); list.push(entry);
+  list.sort((a, b) => b.skor - a.skor || (b.benar / (b.total || 1)) - (a.benar / (a.total || 1)));
+  const trimmed = list.slice(0, 50); lbStore(trimmed);
+  return trimmed.findIndex(e => e.id === entry.id) + 1;
+}
+function tampilPapanSkor() {
+  const list = lbLoad().slice(0, PENGATURAN.jumlahPapanSkor);
+  const medal = i => ['🥇', '🥈', '🥉'][i] || `<span class="font-display text-slate-400">${i + 1}</span>`;
+  const rows = list.length ? list.map((e, i) => `
+    <div class="flex items-center gap-3 p-3 rounded-2xl ${i < 3 ? 'bg-amber-50' : 'bg-slate-50'}">
+      <div class="w-8 text-center text-2xl">${medal(i)}</div>
+      <div class="flex-1 min-w-0"><div class="font-bold truncate">${esc(e.nama)} ${e.kelas ? `<span class="text-xs text-slate-500">· ${esc(e.kelas)}</span>` : ''}</div>
+      <div class="text-xs text-slate-500">${e.benar}/${e.total} benar · Level ${e.level} · ${esc(e.tanggal)}</div></div>
+      <div class="font-display text-2xl text-indigo-600">${e.skor}</div>
+    </div>`).join('') : '<p class="text-center text-slate-400 py-6">Belum ada skor. Jadilah yang pertama! 🚀</p>';
+  showModal(`
+    <div class="text-center"><div class="text-5xl">🏆</div><h2 class="font-display text-3xl mt-1">Papan Skor Kelas</h2>
+    <p class="text-xs text-slate-500">Tersimpan di perangkat ini</p></div>
+    <div class="mt-4 grid gap-2">${rows}</div>
+    <div class="mt-5 grid gap-3">
+      <button data-primary onclick="${S.screen === 'game' && S.state === 'over' ? 'endGameBack()' : 'hideModal()'}" class="${BTN('bg-indigo-500')}">Tutup</button>
+      <button onclick="resetPapanSkor()" class="text-sm text-rose-500 font-bold underline">Hapus semua skor (guru)</button>
+    </div>`);
+}
+function endGameBack() { keMenu(); }
+function resetPapanSkor() { if (confirm('Hapus semua data papan skor di perangkat ini?')) { lbStore([]); tampilPapanSkor(); } }
+
+function tampilCaraMain(fromPause) {
+  showModal(`
+    <div class="text-center"><div class="text-5xl">🛵</div><h2 class="font-display text-3xl mt-1">Cara Main</h2></div>
+    <div class="mt-4 space-y-3 text-sm leading-relaxed">
+      <p class="bg-amber-50 rounded-2xl p-3">Kamu adalah <b>Raka</b>, kurir digital GeoPac. Baca soal, lalu <b>antarkan paket ke pos jawaban</b> yang benar: <b style="color:#ef4444">A</b> kiri atas, <b style="color:#3b82f6">B</b> kanan atas, <b style="color:#22c55e">C</b> kiri bawah, <b style="color:#f59e0b">D</b> kanan bawah.</p>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="bg-sky-50 rounded-xl p-3">🎮 <b>Gerak:</b> D-pad, panah/WASD, atau swipe di arena</div>
+        <div class="bg-rose-50 rounded-xl p-3">👻 <b>Hindari</b> hantu Macet, Polusi, Timpang &amp; Nganggur</div>
+        <div class="bg-emerald-50 rounded-xl p-3">⚡ <b>Energi Terbarukan</b> membuat hantu takut—tangkap mereka!</div>
+        <div class="bg-violet-50 rounded-xl p-3">⏱️ Jawab sebelum waktu habis. Lebih cepat = bonus besar</div>
+      </div>
+      <p class="bg-indigo-50 rounded-2xl p-3">⭐ Benar: +100 &amp; bonus waktu · 🔥 Benar beruntun: combo hingga ×2 · ❤️ Salah, kehabisan waktu, atau tertangkap hantu: −1 nyawa · Selesaikan level untuk bonus +1 nyawa.</p>
+    </div>
+    <button data-primary onclick="${fromPause ? 'S.state=S.prevState;togglePause()' : 'hideModal()'}" class="${BTN('bg-emerald-500')} mt-5">Mengerti! 👍</button>`);
+}
+function togglePauseReopen() { /* lanjut main setelah membaca cara main dari menu jeda */ }
+
+// ======================= INPUT =======================
+const KEYMAP = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', W: 'up', s: 'down', S: 'down', a: 'left', A: 'left', d: 'right', D: 'right' };
+document.addEventListener('keydown', e => {
+  if (modalOpen()) {
+    if (e.key === 'Enter' || e.key === ' ') { const b = document.querySelector('#modalBox [data-primary]'); if (b) { e.preventDefault(); b.click(); } }
+    return;
+  }
+  if (S.screen === 'menu' && e.key === 'Enter') { mulaiGame(); return; }
+  if (S.screen !== 'game') return;
+  const d = KEYMAP[e.key];
+  if (d) { e.preventDefault(); if (player) player.next = d; }
+  if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') togglePause();
+});
+document.querySelectorAll('[data-dir]').forEach(b => {
+  const press = e => { e.preventDefault(); if (player) player.next = b.dataset.dir; b.classList.add('pressed'); };
+  const release = () => b.classList.remove('pressed');
+  b.addEventListener('pointerdown', press);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, release));
+});
+let sx = 0, sy = 0;
+cv.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+cv.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) > 22 && player) {
+    player.next = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+    sx = t.clientX; sy = t.clientY;
+  }
+}, { passive: false });
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+document.addEventListener('visibilitychange', () => { if (document.hidden && S.screen === 'game' && (S.state === 'play' || S.state === 'ready')) togglePause(); });
+
+// ======================= INISIALISASI =======================
+$('inLevel').innerHTML = LEVEL_GAME.map((lv, i) => `<option value="${i}">Level ${i + 1}</option>`).join('');
+let lastTs = 0;
+function loop(ts) {
+  const dt = Math.min(0.05, (ts - lastTs) / 1000 || 0); lastTs = ts;
+  if (S.screen === 'game') { update(dt); draw(ts / 1000); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
